@@ -8,18 +8,26 @@ class Cell:
     kb_J = 1.38 * (10 ** -23)  # J/K
 
 
-    def __init__(self, mass,x_1,x_2):
+    def __init__(self, mass,x_1,x_2,position):
         # from research online, approx 10**36 particles taken away per second
         self.mass = mass # mass in kg
-        self.x_1 = x_1 # inner coordinate position
-        self.x_2 = x_2 # outer coordinate position
-        self.length = self.x_2 - self.x_1 # length in meters
+        self.initial_x_1 = x_1 # inner coordinate position
+        self.initial_x_2 = x_2 # outer coordinate position
+        self.initial_length = self.initial_x_2 - self.initial_x_1 # length in meters
         self.num_particles = self.mass/self.mass_hyd
+
+        self.cell_position = position # from 0 to ncells-1
 
         # starting all cells with the same energy
         self.initial_internal_energy = (3/2)*self.num_particles*self.kb_J*(10**6)
 
+    def update_position(self):
 
+        return self.x_1, self.x_2
+
+
+class Node:
+    """the node for each cell"""
 
 
 class Sph_Cell(Cell):
@@ -33,6 +41,18 @@ class Sph_Cell(Cell):
         self.outer_surface_area = 4*np.pi*(x_2**2)
         self.particle_density = self.num_particles/self.volume
         self.mass_density = self.mass/self.volume
+
+    def update_pressure(self):
+
+        return self.pressure
+
+    def update_energy(self):
+
+        return self.energy
+
+
+
+
 
 
 class Cyl_Cell(Cell):
