@@ -2,6 +2,7 @@ import numpy as np
 import cell_class as cc
 import matplotlib.pyplot as plt
 
+
 def explicit_simulate_wind():
 
 
@@ -17,7 +18,7 @@ def explicit_simulate_wind():
     radius_sun = 6.968*(10**8) # radius in meters
 
     corona_inner = radius_sun*0.85
-    corona_outer = radius_sun*0.9
+    corona_outer = radius_sun
 
 
     """looking up plasma, we just missed the factor of n"""
@@ -44,7 +45,7 @@ def explicit_simulate_wind():
     """because all cells have the same mass, no need to 
         make an eqn for node mass"""
 
-    num_cells = 10
+    num_cells = 100
     num_time_steps = 1000
     time_step_length = 1
 
@@ -143,7 +144,7 @@ def explicit_simulate_wind():
 
     for i in range(num_time_steps):
         """maybe put zeroth cell changes here"""
-        for j in range(num_cells-1):
+        for j in range(num_cells):
 
             delta_energy = evolve_energy(velocity=node_velocity,pressure=cell_pressure,
                                          area=node_area,d_time=time_step_length,count=j,limit=num_cells)
@@ -202,7 +203,7 @@ def explicit_simulate_wind():
 
 def evolve_energy(velocity,pressure,area,d_time,count,limit):
 
-    cell_limit = limit
+    cell_limit = limit-1
     node_limit = limit+1
 
     cell_pos = count
@@ -214,7 +215,7 @@ def evolve_energy(velocity,pressure,area,d_time,count,limit):
         p_diff2 = pressure[cell_pos] - pressure[cell_pos+1]
         #p_area = p_diff1*area[node_pos] + p_diff2*area[node_pos+1]
         d_energy1 = p_diff1*area[node_pos]*velocity[node_pos]*d_time
-        d_energy2 = p_diff1 * area[node_pos+1] * velocity[node_pos+1] * d_time
+        d_energy2 = p_diff2 * area[node_pos+1] * velocity[node_pos+1] * d_time
 
         d_energy = d_energy1 + d_energy2
 
@@ -244,7 +245,7 @@ def evolve_energy(velocity,pressure,area,d_time,count,limit):
 
 def evolve_velocity(velocity,pressure,d_time,area,mass,gravity,j,limit):
 
-    cell_limit = limit
+    cell_limit = limit-1
     node_limit = limit+1
 
     if(j<cell_limit):
@@ -255,7 +256,7 @@ def evolve_velocity(velocity,pressure,d_time,area,mass,gravity,j,limit):
         new_vel = velocity[j+1] + p_vel + grav_t
 
         delta_v = p_vel + grav_t
-        print('change in velocity = ',delta_v)
+        #print('change in velocity = ',delta_v)
 
 
     if(j==cell_limit):
@@ -265,7 +266,7 @@ def evolve_velocity(velocity,pressure,d_time,area,mass,gravity,j,limit):
 
         new_vel = velocity[j+1] + p_vel + grav_t
 
-        if (pressure[j] - pressure[j]/2) < 0.01 :
+        if (pressure[j] - pressure[j]/2) < 0.01*pressure[j] :
             new_vel = velocity[j+1] + grav_t
 
 
