@@ -38,16 +38,22 @@ def explicit_simulate_wind():
     kb_J = 1.38*(10**-23)  # J/K
     kb_ev = 8.617*(10**-5) # eV/K
 
-    mass_of_cell= 10**8 # kg, conservative estimate
+    #mass_of_cell= 10**8 # kg, conservative estimate
+
+    """here 10**40 is the density of 10**15 particles/m**3 times the volume
+        I've chosen to leave the mass constant for the moment"""
+    mass_of_cell = (10**40)*mass_of_hydrogen_kg
 
     num_moles = (mass_of_cell/mass_of_hydrogen_kg)/avogadro
 
-    """because all cells have the same mass, no need to 
-        make an eqn for node mass"""
+    """The number of cells and time step length are 
+        mixed together by a ratio, 
+        more cells => shorter length"""
 
-    num_cells = 100
-    num_time_steps = 1000
+    num_cells = 10
     time_step_length = 1
+    num_time_steps = 1000
+
 
     cell_length = (corona_outer-corona_inner)/num_cells
 
@@ -94,6 +100,8 @@ def explicit_simulate_wind():
         node_area[i+1] = 4*np.pi*(node_position[i+1]**2)
         node_gravity[i+1] = -G*mass_sun/(node_position[i+1]**2)
 
+        node_velocity[i+1] = 10**5 # 100 km/s
+
         cell_particles[i] = mass_of_cell / mass_of_hydrogen_kg
 
         cell_energy[i] = (3 / 2) * cell_particles[i]*kb_J * T_corona
@@ -112,13 +120,9 @@ def explicit_simulate_wind():
         cell_energy_matrix[0,i] = cell_energy[i]
         cell_density_matrix[0,i] = cell_density[i]
         node_gravity_matrix[0,i+1] = node_gravity[i+1]
+        node_velocity_matrix[0,i+1] = node_velocity[i+1]
 
 
-    """initializing velocity"""
-    #for i in range(num_cells):
-    #    node_velocity[i + 1] = evolve_velocity(velocity=node_velocity, pressure=cell_pressure,d_time=time_step_length,
-    #                                           area=node_area,mass=mass_of_cell,
-    #                                           gravity=node_gravity,j=i,limit=num_cells)
 
     """initialization complete"""
 
@@ -161,9 +165,12 @@ def explicit_simulate_wind():
 
             cell_energy[j] = cell_energy[j] + delta_energy
             cell_volume[j] = (4/3)*np.pi*(node_position[j+1]**3 - node_position[j]**3)
-            cell_density[j] = mass_of_cell/cell_volume[j]
+            """experimenting """
+
             #cell_density[j] = 1 / cell_volume[j]
             #cell_pressure[j] = (gamma-1)*cell_density[j]*cell_energy[j]
+
+            cell_density[j] = mass_of_cell / cell_volume[j]
             cell_pressure[j] = (num_moles * R * T_corona) / cell_volume[j]
 
             node_velocity_matrix[i+1,j+1] = node_velocity[j+1]
@@ -179,20 +186,20 @@ def explicit_simulate_wind():
                 #print("negative velocity! likely error",j,i)
                 #return
 
-        if i%(100) == 0 :
+        if i%(1000) == 0 :
             plt.plot(node_position / radius_sun, node_velocity/1000,'bo')
             plt.show()
 
     #print(node_position[50],node_velocity[50])
 
-    print('\npressure \n',cell_pressure_matrix[0,:])
-    print('\nvelocity \n',node_velocity_matrix[1,:]/1000)
-    print('\nposition \n',node_position_matrix[:,:]/radius_sun)
-    print('\nenergy\n',cell_energy_matrix[0,:])
+    print('\npressure \n',cell_pressure_matrix[0:800:100,:])
+    print('\nvelocity \n',node_velocity_matrix[0:800:100,:]/1000)
+    #print('\nposition \n',node_position_matrix[:,:]/radius_sun)
+    print('\nenergy\n',cell_energy_matrix[0:800:100,:])
     print('\nvolume\n',cell_volume_matrix[0,:])
     print('\ndensity\n',cell_density_matrix[0,:])
-    print('\narea\n',node_area_matrix[0,:])
-    print('\ngravity\n',node_gravity_matrix[0,:])
+    #print('\narea\n',node_area_matrix[0,:])
+    #print('\ngravity\n',node_gravity_matrix[0,:])
 
     #plt.plot(node_position/radius_sun,node_velocity/1000,'bo')
     #plt.show()
@@ -217,21 +224,28 @@ def evolve_energy(velocity,pressure,area,d_time,count,limit):
         d_energy1 = p_diff1*area[node_pos]*velocity[node_pos]*d_time
         d_energy2 = p_diff2 * area[node_pos+1] * velocity[node_pos+1] * d_time
 
-        d_energy = d_energy1 + d_energy2
+        """minus sign on energy2 because expanding"""
+        d_energy = d_energy1 - d_energy2
 
     # beginning boundary term
     if(cell_pos == 0):
         p_diff = pressure[0] - pressure[1]
 
-        d_energy = velocity[1]*d_time*area[1]*p_diff
+        """minus sign because expanding"""
+        d_energy = -velocity[1]*d_time*area[1]*p_diff
 
     # last cell boundary term
     if(cell_pos == cell_limit):
         p_diff1 = pressure[cell_pos] - pressure[cell_pos-1]
         p_diff2 = pressure[cell_pos]
-        p_area = p_diff1 * area[node_pos] + p_diff2 * area[node_pos + 1]
+        p_area1 = p_diff1 * area[node_pos]
+        p_area2 = p_diff2 * area[node_pos + 1]
 
-        d_energy = velocity[count] * d_time * (p_area)
+        d_energy1 = velocity[count]*d_time*p_area1
+        d_energy2 = velocity[cell_pos+1]*d_time*p_area2
+
+        """minus sign on energy2 because it is expanding outward"""
+        d_energy = d_energy1 - d_energy2
 
     """if count == 1:
         print('count1')
@@ -266,7 +280,9 @@ def evolve_velocity(velocity,pressure,d_time,area,mass,gravity,j,limit):
 
         new_vel = velocity[j+1] + p_vel + grav_t
 
-        if (pressure[j] - pressure[j]/2) < 0.01*pressure[j] :
+        """this is a bad condition, it will always happen
+            a - 0.5*a == 0.5a"""
+        if (pressure[j] - pressure[j]/2) < 0.1*pressure[j] :
             new_vel = velocity[j+1] + grav_t
 
 
