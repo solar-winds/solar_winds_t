@@ -223,15 +223,24 @@ def explicit_simulate_wind():
             #if(node_velocity[j+1] < 0):
                 #print("negative velocity! likely error",j,i)
                 #return
-
-        #if i%(100) == 0 :
-            #plt.plot(node_position / radius_sun, node_velocity/1000,'bo')
-            #plt.show()
+        plot_title = 'Time Evolution for timestep = %i' % i
+        save_title = 'plots/vel_pos_%i.pdf' % i
+        if i%(100) == 0 :
+            plt.plot(node_position / radius_sun, node_velocity/1000,'bo')
+            plt.title(plot_title)
+            plt.xlabel('distance in solar radii')
+            plt.ylabel('speed in km/s')
+            plt.savefig(save_title)
+            plt.show()
 
     #print(node_position[50],node_velocity[50])
 
     plt.plot(node_position_matrix[900,:] / radius_sun, node_velocity_matrix[900,:]/1000,'bo')
     plt.plot(cell_position_matrix[900,:]/radius_sun,cell_speed_of_sound_matrix[900,:]/1000,'go')
+    plt.title(plot_title)
+    plt.xlabel('distance in solar radii')
+    plt.ylabel('speed in km/s')
+    plt.savefig('plots/final_vel_pos.pdf')
     plt.show()
 
     np.set_printoptions(threshold=np.inf)
@@ -250,11 +259,16 @@ def explicit_simulate_wind():
     #plt.plot(node_position/radius_sun,node_velocity/1000,'bo')
     #plt.show()
 
-    total_energy_start = sum(node_velocity_matrix[0, :] ** 2) + sum(cell_energy_matrix[0, :])
+    total_energy_start = sum( node_velocity_matrix[0, :] ** 2) + sum(cell_energy_matrix[0, :])
     total_energy_end = sum(node_velocity_matrix[num_time_steps - 1, :] ** 2) + sum(
         cell_energy_matrix[num_time_steps - 1, :])
     print(total_energy_start)
     print(total_energy_end)
+    print("End Total energy is ", total_energy_end / total_energy_start, " from start energy")
+
+    total_energy_start = sum( 0.5 * node_mass * node_velocity_matrix[1,:] ** 2) + sum(cell_energy_matrix[1, :])
+    total_energy_end = sum( 0.5 * node_mass * node_velocity_matrix[900, :] ** 2) + sum(
+        cell_energy_matrix[900, :])
     print("End Total energy is ", total_energy_end / total_energy_start, " from start energy")
 
     return
